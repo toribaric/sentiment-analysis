@@ -1,5 +1,5 @@
 import os
-import datetime
+import numpy as np
 from keras import backend as K
 from keras.models import Sequential
 from keras.layers import (
@@ -44,13 +44,20 @@ class SentimentModel(object):
             callbacks=self.callbacks()
         )
 
-    def callbacks(self):
-        log_dir = '{}/iter_{:%Y%m%dT%H%M%S}'.format(
-            self.config.get('log_dir'), datetime.datetime.now())
-        checkpoint_path = os.path.join(log_dir, 'weights_{epoch:04d}.h5')
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+    def analyze(self, sequence, verbose=0):
+        predictions = self.keras_model.predict(sequence, verbose=verbose)
+        if verbose:
+            print(predictions)
 
+        sentiments = ['negative', 'neutral', 'positive']
+        return sentiments[np.argmax(predictions)]
+
+    def load_weights(self, weights_path):
+        self.keras_model.load_weights(weights_path)
+
+    def callbacks(self):
+        log_dir = self.config.get('log_dir')
+        checkpoint_path = os.path.join(log_dir, 'weights_{epoch:04d}.h5')
         return [
             TensorBoard(log_dir=log_dir),
             ModelCheckpoint(

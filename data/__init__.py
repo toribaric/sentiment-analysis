@@ -1,3 +1,4 @@
-from data.parser import load_dataset, generate_sequences
+from data.parser import (
+    load_dataset, generate_train_sequences, generate_inference_sequence)
 
-__all__ = [load_dataset, generate_sequences]
+__all__ = [load_dataset, generate_train_sequences, generate_inference_sequence]

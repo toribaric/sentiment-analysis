@@ -1,4 +1,5 @@
 .DS_Store
 datasets
+weights
 .vscode
 __pycache__

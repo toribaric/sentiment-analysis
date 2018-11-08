@@ -1,5 +1,6 @@
 import gzip
 import glob
+import pickle
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -21,10 +22,10 @@ def load_dataset(path):
             yield eval(line)
 
 
-def generate_sequences(dataset, num_samples=120000):
+def generate_train_sequences(dataset, log_dir, num_samples=120000):
     records = take_records(dataset, int(num_samples / NUM_CLASSES))
     data = process_records(records)
-    vocab_size, documents = tokenize_documents(data)
+    vocab_size, documents = tokenize_documents(data, log_dir)
     train_docs, val_docs, train_labels, val_labels = train_test_split(
         documents, data['label'].values, test_size=0.25)
 
@@ -32,6 +33,15 @@ def generate_sequences(dataset, num_samples=120000):
 
     return (vocab_size, DocumentsSequence(train_docs, train_labels),
             DocumentsSequence(val_docs, val_labels))
+
+
+def generate_inference_sequence(text, tokenizer_path):
+    tokenizer = Tokenizer()
+    with open(tokenizer_path, 'rb') as handle:
+        tokenizer = pickle.load(handle)
+
+    sequence = tokenizer.texts_to_sequences([text])
+    return pad_sequences(sequence, maxlen=MAX_LEN)
 
 
 # Internal Functions
@@ -46,9 +56,12 @@ def process_records(records):
     return data.reindex(np.random.permutation(data.index))
 
 
-def tokenize_documents(data):
+def tokenize_documents(data, log_dir):
     tokenizer = Tokenizer(num_words=MAX_WORDS, lower=True)
     tokenizer.fit_on_texts(data['reviewText'].values)
+    with open('{}/tokenizer.pickle'.format(log_dir), 'wb') as handle:
+        pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     sequences = tokenizer.texts_to_sequences(data['reviewText'].values)
     vocab_size = len(tokenizer.word_index) + 1
     documents = pad_sequences(sequences, maxlen=MAX_LEN)
