@@ -7,7 +7,7 @@ from keras.layers import (
 from keras.callbacks import TensorBoard, ModelCheckpoint
 
 from layers import Attention
-from config import MAX_LEN, NUM_CLASSES
+from config import MAX_LEN, NUM_CLASSES, SENTIMENTS
 
 
 class SentimentModel(object):
@@ -49,8 +49,7 @@ class SentimentModel(object):
         if verbose:
             print(predictions)
 
-        sentiments = ['negative', 'neutral', 'positive']
-        return sentiments[np.argmax(predictions)]
+        return SENTIMENTS[np.argmax(predictions)]
 
     def load_weights(self, weights_path):
         self.keras_model.load_weights(weights_path)

@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from data.sequence import DocumentsSequence
-from config import MAX_LEN, MAX_WORDS, NUM_CLASSES
+from config import MAX_LEN, MAX_WORDS, NUM_CLASSES, CLASSES
 
 
 # API
@@ -50,9 +50,9 @@ def generate_inference_sequence(text, tokenizer_path):
 def process_records(records):
     data = pd.DataFrame(records)
     data = data[['reviewText', 'overall']]
-    data.loc[data['overall'] == 1.0, 'label'] = 0
-    data.loc[data['overall'] == 3.0, 'label'] = 1
-    data.loc[data['overall'] == 5.0, 'label'] = 2
+    for label, clazz in enumerate(CLASSES):
+        data.loc[data['overall'] == clazz, 'label'] = label
+
     return data.reindex(np.random.permutation(data.index))
 
 
@@ -68,9 +68,8 @@ def tokenize_documents(data, log_dir):
     return vocab_size, documents
 
 
-def take_records(dataset, quantity, classes_to_take=[1., 3., 5.],
-                 max_review_length=300):
-    counters = [[c, 0] for c in classes_to_take]
+def take_records(dataset, quantity, classes=CLASSES, max_review_length=300):
+    counters = [[c, 0] for c in classes]
     records = []
     while(not all([counter == quantity for _, counter in counters])):
         record = next(dataset)
@@ -95,9 +94,9 @@ def should_add_record(record, counters, quantity):
 
 def print_dataset_info(vocab_size, documents, train_labels, val_labels):
     def print_class_distributions(labels):
-        print('Found {} 0s'.format(np.count_nonzero(labels == 0)))
-        print('Found {} 1s'.format(np.count_nonzero(labels == 1)))
-        print('Found {} 2s'.format(np.count_nonzero(labels == 2)))
+        for label, _ in enumerate(CLASSES):
+            print('Found {} {}s'.format(
+                np.count_nonzero(labels == label), label))
 
     print('----------------------------')
     print('VOCAB SIZE: {}'.format(vocab_size))
