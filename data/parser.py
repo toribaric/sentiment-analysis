@@ -8,7 +8,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from data.sequence import DocumentsSequence
-from config import MAX_LEN, MAX_WORDS, NUM_CLASSES, CLASSES
+from config import (
+    MAX_LEN, MAX_WORDS, NUM_CLASSES, CLASSES, DATASET_TEXT_COLUMN,
+    DATASET_CLASS_COLUMN)
 
 
 # API
@@ -49,20 +51,20 @@ def generate_inference_sequence(text, tokenizer_path):
 
 def process_records(records):
     data = pd.DataFrame(records)
-    data = data[['reviewText', 'overall']]
+    data = data[[DATASET_TEXT_COLUMN, DATASET_CLASS_COLUMN]]
     for label, clazz in enumerate(CLASSES):
-        data.loc[data['overall'] == clazz, 'label'] = label
+        data.loc[data[DATASET_CLASS_COLUMN] == clazz, 'label'] = label
 
     return data.reindex(np.random.permutation(data.index))
 
 
 def tokenize_documents(data, log_dir):
     tokenizer = Tokenizer(num_words=MAX_WORDS, lower=True)
-    tokenizer.fit_on_texts(data['reviewText'].values)
+    tokenizer.fit_on_texts(data[DATASET_TEXT_COLUMN].values)
     with open('{}/tokenizer.pickle'.format(log_dir), 'wb') as handle:
         pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    sequences = tokenizer.texts_to_sequences(data['reviewText'].values)
+    sequences = tokenizer.texts_to_sequences(data[DATASET_TEXT_COLUMN].values)
     vocab_size = len(tokenizer.word_index) + 1
     documents = pad_sequences(sequences, maxlen=MAX_LEN)
     return vocab_size, documents
@@ -73,7 +75,7 @@ def take_records(dataset, quantity, classes=CLASSES, max_review_length=300):
     records = []
     while(not all([counter == quantity for _, counter in counters])):
         record = next(dataset)
-        if len(record.get('reviewText')) > max_review_length:
+        if len(record.get(DATASET_TEXT_COLUMN)) > max_review_length:
             continue
 
         should_add, class_index = should_add_record(record, counters, quantity)
@@ -86,7 +88,7 @@ def take_records(dataset, quantity, classes=CLASSES, max_review_length=300):
 
 def should_add_record(record, counters, quantity):
     for i, [clazz, counter] in enumerate(counters):
-        if record.get('overall') == clazz and counter < quantity:
+        if record.get(DATASET_CLASS_COLUMN) == clazz and counter < quantity:
             return True, i
 
     return False, None

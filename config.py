@@ -6,5 +6,7 @@ MAX_LEN = 100
 MAX_WORDS = 10000
 BATCH_SIZE = 32
 NUM_CLASSES = 3
+DATASET_TEXT_COLUMN = 'reviewText'
+DATASET_CLASS_COLUMN = 'overall'
 CLASSES = [1., 3., 5.]
 SENTIMENTS = ['negative', 'neutral', 'positive']
