@@ -4,17 +4,22 @@ import argparse
 
 from model import SentimentModel
 from data import (
-    load_dataset, generate_train_sequences, generate_inference_sequence)
+    load_dataset, generate_train_data, generate_train_sequences,
+    generate_inference_sequence)
 from config import DEFAULT_LOG_DIR, MAX_WORDS
 
 
 NUM_TRAINING_SAMPLES = 450000
 
 
-def create_model(log_dir=None):
+def create_model(log_dir=None, val_pair=None, vocab=None):
     return SentimentModel(config={
         'vocab_size': MAX_WORDS,
-        'log_dir': log_dir
+        'log_dir': log_dir,
+        'tensorboard': {
+            'vocab': vocab,
+            'val_pair': val_pair,
+        },
     })
 
 
@@ -24,9 +29,11 @@ def train(dataset, logs):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    _, training_seq, validation_seq = generate_train_sequences(
+    vocab, train_pair, val_pair = generate_train_data(
         load_dataset(dataset), log_dir, NUM_TRAINING_SAMPLES)
-    model = create_model(log_dir)
+    training_seq, validation_seq = generate_train_sequences(
+        train_pair, val_pair)
+    model = create_model(log_dir, val_pair, vocab)
     model.train(training_seq, validation_seq)
 
 

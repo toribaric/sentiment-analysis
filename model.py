@@ -4,10 +4,11 @@ from keras import backend as K
 from keras.models import Sequential
 from keras.layers import (
     Embedding, LSTM, CuDNNLSTM, Dense, SpatialDropout1D, Dropout)
-from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.callbacks import ModelCheckpoint
 
 from layers import Attention
-from config import MAX_LEN, NUM_CLASSES, SENTIMENTS
+from callbacks import EnhancedTensorBoard
+from config import MAX_LEN, MAX_WORDS, NUM_CLASSES, SENTIMENTS, BATCH_SIZE
 
 
 class SentimentModel(object):
@@ -57,8 +58,17 @@ class SentimentModel(object):
     def callbacks(self):
         log_dir = self.config.get('log_dir')
         checkpoint_path = os.path.join(log_dir, 'weights_{epoch:04d}.h5')
+        tensorboard_config = self.config.get('tensorboard')
         return [
-            TensorBoard(log_dir=log_dir),
+            EnhancedTensorBoard(
+                val_pair=tensorboard_config.get('val_pair'),
+                vocab=tensorboard_config.get('vocab'),
+                batch_size=BATCH_SIZE,
+                max_words=MAX_WORDS,
+                log_dir=log_dir,
+                histogram_freq=1,
+                embeddings_freq=10,
+            ),
             ModelCheckpoint(
                 checkpoint_path, verbose=0, save_weights_only=True),
         ]

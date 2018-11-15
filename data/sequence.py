@@ -1,15 +1,14 @@
 import numpy as np
-from keras.utils import Sequence, to_categorical
+from keras.utils import Sequence
 
-from config import NUM_CLASSES, BATCH_SIZE
+from config import BATCH_SIZE
 
 
 class DocumentsSequence(Sequence):
 
     def __init__(self, documents, labels, batch_size=BATCH_SIZE,
-                 num_classes=NUM_CLASSES, shuffle=True):
+                 shuffle=True):
         self.batch_size = batch_size
-        self.num_classes = num_classes
         self.shuffle = shuffle
         self.documents = documents
         self.labels = labels
@@ -35,4 +34,4 @@ class DocumentsSequence(Sequence):
     def generate_data(self, documents, labels):
         documents = np.asarray(documents)
         labels = np.asarray(labels)
-        return documents, to_categorical(labels, num_classes=self.num_classes)
+        return documents, labels

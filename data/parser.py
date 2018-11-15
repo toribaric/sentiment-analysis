@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -24,17 +25,19 @@ def load_dataset(path):
             yield eval(line)
 
 
-def generate_train_sequences(dataset, log_dir, num_samples=120000):
+def generate_train_data(dataset, log_dir, num_samples=120000):
     records = take_records(dataset, int(num_samples / NUM_CLASSES))
     data = process_records(records)
-    vocab_size, documents = tokenize_documents(data, log_dir)
+    vocab, documents = tokenize_documents(data, log_dir)
+    labels = to_categorical(data['label'].values, num_classes=NUM_CLASSES)
     train_docs, val_docs, train_labels, val_labels = train_test_split(
-        documents, data['label'].values, test_size=0.25)
+        documents, labels, test_size=0.25)
+    print_dataset_info(vocab, documents, train_labels, val_labels)
+    return vocab, (train_docs, train_labels), (val_docs, val_labels)
 
-    print_dataset_info(vocab_size, documents, train_labels, val_labels)
 
-    return (vocab_size, DocumentsSequence(train_docs, train_labels),
-            DocumentsSequence(val_docs, val_labels))
+def generate_train_sequences(train_pair, val_pair):
+    return DocumentsSequence(*train_pair), DocumentsSequence(*val_pair)
 
 
 def generate_inference_sequence(text, tokenizer_path):
@@ -65,9 +68,8 @@ def tokenize_documents(data, log_dir):
         pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     sequences = tokenizer.texts_to_sequences(data[DATASET_TEXT_COLUMN].values)
-    vocab_size = len(tokenizer.word_index) + 1
     documents = pad_sequences(sequences, maxlen=MAX_LEN)
-    return vocab_size, documents
+    return tokenizer.word_index, documents
 
 
 def take_records(dataset, quantity, classes=CLASSES, max_review_length=300):
@@ -94,14 +96,14 @@ def should_add_record(record, counters, quantity):
     return False, None
 
 
-def print_dataset_info(vocab_size, documents, train_labels, val_labels):
+def print_dataset_info(vocab, documents, train_labels, val_labels):
     def print_class_distributions(labels):
         for label, _ in enumerate(CLASSES):
             print('Found {} {}s'.format(
                 np.count_nonzero(labels == label), label))
 
     print('----------------------------')
-    print('VOCAB SIZE: {}'.format(vocab_size))
+    print('VOCAB SIZE: {}'.format(len(vocab) + 1))
     print('TOTAL SET LENGTH: {}'.format(len(documents)))
     print('TRAINING SET LENGTH: {}'.format(len(train_labels)))
     print('VAL SET LENGTH: {}'.format(len(val_labels)))
