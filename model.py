@@ -3,7 +3,8 @@ import numpy as np
 from keras import backend as K
 from keras.models import Sequential
 from keras.layers import (
-    Embedding, LSTM, CuDNNLSTM, Dense, SpatialDropout1D, Dropout)
+    Embedding, LSTM, CuDNNLSTM, Dense, SpatialDropout1D, Dropout,
+    Bidirectional)
 from keras.callbacks import ModelCheckpoint
 
 from layers import Attention
@@ -24,10 +25,10 @@ class SentimentModel(object):
         model.add(Embedding(self.config.get('vocab_size'),
                             128, input_length=MAX_LEN))
         model.add(SpatialDropout1D(0.7))
-        model.add(self.LSTM(288, return_sequences=True))
-        model.add(Attention(288))
+        model.add(Bidirectional(self.LSTM(192, return_sequences=True)))
+        model.add(Dropout(0.5))
+        model.add(Attention(384))
         model.add(Dropout(0.2))
-        model.add(Dense(32, activation='relu'))
         model.add(Dense(NUM_CLASSES, activation='softmax'))
         model.compile(
             optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
@@ -36,7 +37,7 @@ class SentimentModel(object):
 
     def train(self, training_sequence, validation_sequence):
         self.keras_model.fit_generator(
-            epochs=10,
+            epochs=21,
             generator=training_sequence,
             validation_data=validation_sequence,
             shuffle=True,
