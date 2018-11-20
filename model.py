@@ -1,9 +1,9 @@
 import os
 import numpy as np
 from keras import backend as K
-from keras.models import Sequential
+from keras.models import Model
 from keras.layers import (
-    Embedding, LSTM, CuDNNLSTM, Dense, SpatialDropout1D, Dropout,
+    Input, Embedding, LSTM, CuDNNLSTM, Dense, SpatialDropout1D, Dropout,
     Bidirectional)
 from keras.callbacks import ModelCheckpoint
 
@@ -21,15 +21,18 @@ class SentimentModel(object):
         self.keras_model = self.build()
 
     def build(self):
-        model = Sequential()
-        model.add(Embedding(self.config.get('vocab_size'),
-                            128, input_length=MAX_LEN))
-        model.add(SpatialDropout1D(0.7))
-        model.add(Bidirectional(self.LSTM(192, return_sequences=True)))
-        model.add(Dropout(0.5))
-        model.add(Attention(384))
-        model.add(Dropout(0.2))
-        model.add(Dense(NUM_CLASSES, activation='softmax'))
+        inputs = Input(shape=(MAX_LEN,), name='input')
+        x = Embedding(
+            self.config.get('vocab_size'), 128, input_length=MAX_LEN)(inputs)
+        x = SpatialDropout1D(0.7)(x)
+        x = Bidirectional(self.LSTM(192, return_sequences=True))(x)
+        x = Dropout(0.5)(x)
+        x = Bidirectional(self.LSTM(192, return_sequences=True))(x)
+        x = Dropout(0.5)(x)
+        x = Attention(384)(x)
+        x = Dropout(0.2)(x)
+        outputs = Dense(NUM_CLASSES, activation='softmax')(x)
+        model = Model(inputs=inputs, outputs=outputs)
         model.compile(
             optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
         model.summary()

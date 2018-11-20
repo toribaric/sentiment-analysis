@@ -98,9 +98,9 @@ def should_add_record(record, counters, quantity):
 
 def print_dataset_info(vocab, documents, train_labels, val_labels):
     def print_class_distributions(labels):
-        for label, _ in enumerate(CLASSES):
-            print('Found {} {}s'.format(
-                np.count_nonzero(labels == label), label))
+        counts = np.count_nonzero((labels == [1. for _ in CLASSES]), axis=0)
+        for label, count in enumerate(counts):
+            print('Found {} {}s'.format(count, label))
 
     print('----------------------------')
     print('VOCAB SIZE: {}'.format(len(vocab) + 1))
