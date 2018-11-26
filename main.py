@@ -9,16 +9,16 @@ from data import (
 from config import DEFAULT_LOG_DIR, MAX_WORDS
 
 
-NUM_TRAINING_SAMPLES = 450000
+NUM_TRAINING_SAMPLES = 500000
 
 
-def create_model(log_dir=None, val_pair=None, vocab=None):
+def create_model(log_dir=None, val_tuple=None, vocab=None):
     return SentimentModel(config={
         'vocab_size': MAX_WORDS,
         'log_dir': log_dir,
         'tensorboard': {
             'vocab': vocab,
-            'val_pair': val_pair,
+            'val_tuple': val_tuple,
         },
     })
 
@@ -29,20 +29,21 @@ def train(dataset, logs):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    vocab, train_pair, val_pair = generate_train_data(
+    vocab, train_tuple, val_tuple = generate_train_data(
         load_dataset(dataset), log_dir, NUM_TRAINING_SAMPLES)
     training_seq, validation_seq = generate_train_sequences(
-        train_pair, val_pair)
-    model = create_model(log_dir, val_pair, vocab)
+        train_tuple, val_tuple)
+    model = create_model(log_dir, val_tuple, vocab)
     model.train(training_seq, validation_seq)
 
 
 def inference(weights_path, tokenizer_path, text):
     model = create_model()
     model.load_weights(weights_path)
-    sentiment = model.analyze(
+    sentiment, category = model.analyze(
         generate_inference_sequence(text, tokenizer_path))
-    print('Text sentiment is {}'.format(sentiment))
+    print('Text sentiment is {}, and it\'s mostly about {}.'.format(
+        sentiment, category))
 
 
 if __name__ == '__main__':

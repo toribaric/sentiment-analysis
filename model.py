@@ -9,7 +9,9 @@ from keras.callbacks import ModelCheckpoint
 
 from layers import Attention
 from callbacks import EnhancedTensorBoard
-from config import MAX_LEN, MAX_WORDS, NUM_CLASSES, SENTIMENTS, BATCH_SIZE
+from config import (
+    MAX_LEN, MAX_WORDS, NUM_SENTIMENTS, NUM_CATEGORIES,
+    PREDICTED_SENTIMENT_VALUES, PREDICTED_CATEGORY_VALUES, BATCH_SIZE)
 
 
 class SentimentModel(object):
@@ -22,19 +24,11 @@ class SentimentModel(object):
 
     def build(self):
         inputs = Input(shape=(MAX_LEN,), name='input')
-        x = Embedding(
-            self.config.get('vocab_size'), 128, input_length=MAX_LEN)(inputs)
-        x = SpatialDropout1D(0.7)(x)
-        x = Bidirectional(self.LSTM(192, return_sequences=True))(x)
-        x = Dropout(0.5)(x)
-        x = Bidirectional(self.LSTM(192, return_sequences=True))(x)
-        x = Dropout(0.5)(x)
-        x = Attention(384)(x)
-        x = Dropout(0.2)(x)
-        outputs = Dense(NUM_CLASSES, activation='softmax')(x)
-        model = Model(inputs=inputs, outputs=outputs)
-        model.compile(
-            optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
+        lstm_output = self.build_lstm(inputs)
+        sen_output = self.build_sentiment_classifier(lstm_output)
+        cat_output = self.build_category_classifier(lstm_output)
+        model = Model(inputs=inputs, outputs=[sen_output, cat_output])
+        model.compile(optimizer='adam', metrics=['acc'], **self.loss_params())
         model.summary()
         return model
 
@@ -54,10 +48,44 @@ class SentimentModel(object):
         if verbose:
             print(predictions)
 
-        return SENTIMENTS[np.argmax(predictions)]
+        return (
+            PREDICTED_SENTIMENT_VALUES[np.argmax(predictions[0])],
+            PREDICTED_CATEGORY_VALUES[np.argmax(predictions[1])]
+        )
 
     def load_weights(self, weights_path):
         self.keras_model.load_weights(weights_path)
+
+    # Private methods
+
+    def build_lstm(self, inputs):
+        x = Embedding(
+            self.config.get('vocab_size'), 128, input_length=MAX_LEN)(inputs)
+        x = SpatialDropout1D(0.7)(x)
+        x = Bidirectional(self.LSTM(192, return_sequences=True))(x)
+        x = Dropout(0.5)(x)
+        return Bidirectional(self.LSTM(192, return_sequences=True))(x)
+
+    def build_sentiment_classifier(self, x):
+        x = Attention(384)(x)
+        x = Dropout(0.2)(x)
+        return Dense(
+            NUM_SENTIMENTS, activation='softmax', name='sen_output')(x)
+
+    def build_category_classifier(self, x):
+        x = Attention(384)(x)
+        x = Dropout(0.2)(x)
+        return Dense(
+            NUM_CATEGORIES, activation='softmax', name='cat_output')(x)
+
+    def loss_params(self):
+        return {
+            'loss': {
+                'sen_output': 'categorical_crossentropy',
+                'cat_output': 'categorical_crossentropy'
+            },
+            'loss_weights': {'sen_output': 1.0, 'cat_output': 0.2},
+        }
 
     def callbacks(self):
         log_dir = self.config.get('log_dir')
@@ -65,7 +93,7 @@ class SentimentModel(object):
         tensorboard_config = self.config.get('tensorboard')
         return [
             EnhancedTensorBoard(
-                val_pair=tensorboard_config.get('val_pair'),
+                val_tuple=tensorboard_config.get('val_tuple'),
                 vocab=tensorboard_config.get('vocab'),
                 batch_size=BATCH_SIZE,
                 max_words=MAX_WORDS,

@@ -3,19 +3,21 @@ from keras.callbacks import TensorBoard
 
 
 class EnhancedTensorBoard(TensorBoard):
-    def __init__(self, val_pair, vocab, batch_size, max_words, **kwargs):
+    def __init__(self, val_tuple, vocab, batch_size, max_words, **kwargs):
         super(EnhancedTensorBoard, self).__init__(**kwargs)
-        val_docs, val_labels = val_pair
+        val_docs, val_sen_labels, val_cat_labels = val_tuple
         self.MAX_EMBEDDING_POINTS = 6000
-        self.set_validation_data(val_docs, val_labels)
+        self.set_validation_data(val_docs, val_sen_labels, val_cat_labels)
         self.set_embeddings_data(val_docs)
         self.set_embeddings_metadata(vocab, max_words, kwargs.get('log_dir'))
 
-    def set_validation_data(self, val_docs, val_labels):
+    def set_validation_data(self, val_docs, val_sen_labels, val_cat_labels):
         sample_weights = np.ones(val_docs.shape[0])
         learning_phase = 0
         self.validation_data = [
-            val_docs, val_labels, sample_weights, learning_phase]
+            val_docs, val_sen_labels, val_cat_labels, sample_weights,
+            sample_weights, learning_phase
+        ]
 
     def set_embeddings_data(self, val_docs):
         embeddings_data = []
